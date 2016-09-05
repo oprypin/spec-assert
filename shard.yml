@@ -1,0 +1,10 @@
+name: spec_assert
+version: 0.1.0
+
+authors:
+  - Oleh Prypin <oleh@pryp.in>
+
+description: |
+  Assert macro that lets you write specs naturally without a special expectation DSL
+
+license: MIT
