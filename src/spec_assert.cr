@@ -2,6 +2,17 @@ require "spec"
 
 module Spec
   module DSL
+    private def expected(a, s, b)
+      String.build do |io|
+        delta = s.size - "expected".size
+        if delta >= 0
+          io << " " * delta << "expected  " << a << "\n" << s << "  " << b
+        else
+          io << "expected  " << a << "\n" << " " * -delta << s << "  " << b
+        end
+      end
+    end
+
     # Check that the expression is true, or raise AssertionError otherwise
     macro assert(exp, file = __FILE__, line = __LINE__, bool = true)
       {% if exp.is_a?(Not) %}
@@ -9,34 +20,76 @@ module Spec
         assert({{exp.stringify[1..-1].id}}, {{file}}, {{line}}, {{!bool}})
       {% else %}
         {% call = exp.is_a?(Call) && (obj = exp.receiver) && !exp.args.empty? && (arg = exp.args[0]) %}
-        {% if bool %}
-          {% should = "should".id %}
-        {% else %}
-          {% should = "should_not".id %}
-        {% end %}
-        {% if call && exp.name == "==" %}
-          ({{obj}}).{{should}}(eq({{arg}})
-        {% elsif call && exp.name == "!=" %}
-          ({{obj}}).should{% if bool %}_not{% end %}(eq({{arg}})
-        {% elsif call && (exp.name == ">" || exp.name == ">=" || exp.name == "<" || exp.name == "<=") %}
-          ({{obj}}).{{should}}(be.{{exp.name.id}}({{arg}})
-        {% elsif call && exp.name == "=~" %}
-          ({{obj}}).{{should}}(match({{arg}})
-        # IsA is gimped in macros :(
-        # elsif exp.is_a?(IsA)
-        #  (exp.obj).should(be_a(exp.const)
+        {% if call && %w[== != < > <= >=].includes? exp.name.stringify %}
+          %a, %b = {{obj}}, {{arg}}
+          if {% if bool %}!{% end %}(%a {{exp.name}} %b)
+            %ai, %bi = %a.inspect, %b.inspect
+            if %ai == %bi
+              %ai += " : #{%a.class}"
+              %bi += " : #{%b.class}"
+            end
+            raise Spec::AssertionFailed.new(expected(
+              %ai,
+              "{% if !bool %}not {% end %}to {% unless exp.name == "==" || exp.name == "!=" %}be {% end %}{{exp.name}}", %bi
+            ), {{file}}, {{line}})
+          end
+        {% elsif call && (exp.name == "=~" || exp.name == "!~") %}
+          %a, %b = {{obj}}, {{arg}}
+          if {% if bool %}!{% end %}(%a {{exp.name}} %b)
+            raise Spec::AssertionFailed.new(expected(
+              %a.inspect,
+              "{% if bool != (exp.name == "=~") %}not {% end %}to match", %b.inspect
+            ), {{file}}, {{line}})
+          end
+        {% elsif exp.is_a?(IsA) %}
+          # IsA is gimped in macros :(
+          {% s = exp.stringify %}
+          {% if s.ends_with?("nil?") %}
+            %a = {{s.gsub(/\s*\.\s*nil\?$/, "").id}}
+            %b = Nil
+            {% b = Nil %}
+          {% else %}
+            %a, %b = {{s.gsub(/\.\s*is_a\?(?=[^\.]+$)/, ", ").id}}
+            {% b = s.split("is_a?")[-1].id %}
+          {% end %}
+          if {% if bool %}!{% end %}(%a.is_a?({{b}}))
+            raise Spec::AssertionFailed.new(expected(
+              %a.inspect,
+              "{% if !bool %}not {% end %}to be a", %b.inspect
+            ), {{file}}, {{line}})
+          end
         {% elsif call && exp.name == "same?" %}
-          ({{obj}}).{{should}}(be({{arg}})
+          %a, %b = {{obj}}, {{arg}}
+          if {% if bool %}!{% end %}(%a.same?(%b))
+            raise Spec::AssertionFailed.new(expected(
+              "#{%a.inspect}  @ 0x#{%a.object_id.to_s(16)}",
+              "{% if !bool %}not {% end %}to be", "#{%a.inspect}  @ 0x#{%b.object_id.to_s(16)}"
+            ), {{file}}, {{line}})
+          end
         {% elsif call && exp.name == "includes?" %}
-          ({{obj}}).{{should}}(contain({{arg}})
+          %a, %b = {{obj}}, {{arg}}
+          if {% if bool %}!{% end %}(%a.includes?(%b))
+            raise Spec::AssertionFailed.new(expected(
+              %a.inspect,
+              "{% if !bool %}not {% end %}to include", %b.inspect
+            ), {{file}}, {{line}})
+          end
         {% else %}
-          ({{exp}}).should(be_{% if bool %}truthy{% else %}falsey{% end %}
-        {% end %}, {{file}}, {{line}})
+          %a = {{exp}}
+          if {% if bool %}!{% end %}(
+            {% if exp.is_a? Var %} {{exp}} {% else %} %a {% end %}
+          )
+            raise Spec::AssertionFailed.new(expected(
+              %a.inspect,
+              "to be", "{% if bool %}truthy{% else %}falsey{% end %}"
+            ), {{file}}, {{line}})
+          end
+        {% end %}
       {% end %}
     end
 
     # An alternative way to spell "it" to more naturally describe tests with a name, not an action
-    def test(description = " ", file = __FILE__, line = __LINE__, &block)
+    def test(description = "", file = __FILE__, line = __LINE__, &block)
       it(description, file, line, &block)
     end
   end
