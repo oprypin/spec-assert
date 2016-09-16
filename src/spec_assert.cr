@@ -97,8 +97,8 @@ module Spec
 
       return true if self == other
 
-      if responds_to? :infinite?
-        return false if infinite?
+      if self.responds_to? :infinite?
+        return false if self.infinite?
       end
       if other.responds_to? :infinite?
         return false if other.infinite?
