@@ -16,8 +16,7 @@ module Spec
     # Check that the expression is true, or raise AssertionError otherwise
     macro assert(exp, file = __FILE__, line = __LINE__, bool = true)
       {% if exp.is_a?(Not) %}
-        # undefined macro method 'Not#exp' :(
-        assert({{exp.stringify[1..-1].id}}, {{file}}, {{line}}, {{!bool}})
+        assert({{exp.exp}}, {{file}}, {{line}}, {{!bool}})
       {% else %}
         {% call = exp.is_a?(Call) && (obj = exp.receiver) && !exp.args.empty? && (arg = exp.args[0]) %}
         {% if call && %w[== != < > <= >=].includes? exp.name.stringify %}
@@ -42,20 +41,11 @@ module Spec
             ), {{file}}, {{line}})
           end
         {% elsif exp.is_a?(IsA) %}
-          # IsA is gimped in macros :(
-          {% s = exp.stringify %}
-          {% if s.ends_with?("nil?") %}
-            %a = {{s.gsub(/\s*\.\s*nil\?$/, "").id}}
-            %b = Nil
-            {% b = Nil %}
-          {% else %}
-            %a, %b = {{s.gsub(/\.\s*is_a\?(?=[^\.]+$)/, ", ").id}}
-            {% b = s.split("is_a?")[-1].id %}
-          {% end %}
-          if {% if bool %}!{% end %}(%a.is_a?({{b}}))
+          %a = {{exp.receiver}}
+          if {% if bool %}!{% end %}(%a.is_a?({{exp.arg}}))
             raise Spec::AssertionFailed.new(expected(
               %a.inspect,
-              "{% if !bool %}not {% end %}to be a", %b.inspect
+              "{% if !bool %}not {% end %}to be a", {{exp.arg}}.inspect
             ), {{file}}, {{line}})
           end
         {% elsif call && exp.name == "same?" %}
