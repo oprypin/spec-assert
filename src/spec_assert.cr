@@ -1,7 +1,7 @@
 require "spec"
 
 module Spec
-  module DSL
+  module Methods
     private def expected(a, s, b)
       String.build do |io|
         delta = s.size - "expected".size
