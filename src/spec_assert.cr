@@ -15,6 +15,9 @@ module Spec
 
     # Check that the expression is true, or raise AssertionError otherwise
     macro assert(exp, file = __FILE__, line = __LINE__, bool = true)
+      {% if exp.is_a?(Expressions) && exp.expressions.size == 1 %}
+        {% exp = exp.expressions[0] %}
+      {% end %}
       {% if exp.is_a?(Not) %}
         assert({{exp.exp}}, {{file}}, {{line}}, {{!bool}})
       {% else %}
