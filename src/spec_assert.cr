@@ -19,6 +19,7 @@ module Spec
         assert({{exp.exp}}, {{file}}, {{line}}, {{!bool}})
       {% else %}
         {% call = exp.is_a?(Call) && (obj = exp.receiver) && !exp.args.empty? && (arg = exp.args[0]) %}
+        {% iff = (bool ? "unless" : "if").id %}
         {% if call && %w[== != < > <= >=].includes? exp.name.stringify %}
           %a, %b = {{obj}}, {{arg}}
           if {% if bool %}!{% end %}(%a {{exp.name}} %b)
@@ -34,7 +35,7 @@ module Spec
           end
         {% elsif call && (exp.name == "=~" || exp.name == "!~") %}
           %a, %b = {{obj}}, {{arg}}
-          if {% if bool %}!{% end %}(%a {{exp.name}} %b)
+          {{iff}} %a {{exp.name}} %b
             raise Spec::AssertionFailed.new(expected(
               %a.inspect,
               "{% if bool != (exp.name == "=~") %}not {% end %}to match", %b.inspect
@@ -42,7 +43,7 @@ module Spec
           end
         {% elsif exp.is_a?(IsA) %}
           %a = {{exp.receiver}}
-          if {% if bool %}!{% end %}(%a.is_a?({{exp.arg}}))
+          {{iff}} %a.is_a?({{exp.arg}})
             raise Spec::AssertionFailed.new(expected(
               %a.inspect,
               "{% if !bool %}not {% end %}to be a", {{exp.arg}}.inspect
@@ -50,7 +51,7 @@ module Spec
           end
         {% elsif call && exp.name == "same?" %}
           %a, %b = {{obj}}, {{arg}}
-          if {% if bool %}!{% end %}(%a.same?(%b))
+          {{iff}} %a.same?(%b)
             raise Spec::AssertionFailed.new(expected(
               "#{%a.inspect}  @ 0x#{%a.object_id.to_s(16)}",
               "{% if !bool %}not {% end %}to be", "#{%a.inspect}  @ 0x#{%b.object_id.to_s(16)}"
@@ -58,7 +59,7 @@ module Spec
           end
         {% elsif call && exp.name == "includes?" %}
           %a, %b = {{obj}}, {{arg}}
-          if {% if bool %}!{% end %}(%a.includes?(%b))
+          {{iff}} %a.includes?(%b)
             raise Spec::AssertionFailed.new(expected(
               %a.inspect,
               "{% if !bool %}not {% end %}to include", %b.inspect
@@ -66,9 +67,7 @@ module Spec
           end
         {% else %}
           %a = {{exp}}
-          if {% if bool %}!{% end %}(
-            {% if exp.is_a? Var %} {{exp}} {% else %} %a {% end %}
-          )
+          {{iff}} {% if exp.is_a? Var %} {{exp}} {% else %} %a {% end %}
             raise Spec::AssertionFailed.new(expected(
               %a.inspect,
               "to be", "{% if bool %}truthy{% else %}falsey{% end %}"
