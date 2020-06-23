@@ -8,3 +8,5 @@ description: |
   Assert macro that lets you write specs naturally without a special expectation DSL
 
 license: MIT
+
+crystal: 0.24.1
