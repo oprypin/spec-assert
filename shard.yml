@@ -9,4 +9,4 @@ description: |
 
 license: MIT
 
-crystal: 0.24.1
+crystal: '>= 0.24.1'
