@@ -17,3 +17,5 @@ jobs:
         uses: oprypin/install-crystal@v1
       - name: Run tests
         run: crystal spec
+      - name: Check code formatting
+        run: crystal tool format --check

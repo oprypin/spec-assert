@@ -109,8 +109,8 @@ module Spec
       diff = (other - self).abs
 
       diff <= (rel_tol * self).abs ||
-      diff <= (rel_tol * other).abs ||
-      diff <= abs_tol
+        diff <= (rel_tol * other).abs ||
+        diff <= abs_tol
     end
   end
 

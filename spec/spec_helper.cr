@@ -1,6 +1,5 @@
 require "../src/spec_assert.cr"
 
-
 def trim(msg)
   lines = msg.lines.map(&.rstrip).reject(&.empty?)
   while lines.all? &.starts_with?(" ")
@@ -12,7 +11,6 @@ end
 def trim(msg : Regex)
   Regex.new(trim(msg.source), msg.options)
 end
-
 
 macro fail(exp, msg = nil)
   test do
