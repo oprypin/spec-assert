@@ -114,15 +114,10 @@ module Spec
     end
   end
 
-  class NestedContext
-    def report(result)
+  class ExampleGroup
+    def report(kind, description, file, line, elapsed = nil, ex = nil)
       # Use slash to separate test contexts, not just a space
-      description = @description
-      description += " / #{result.description}" unless result.description.empty?
-      @parent.report Result.new(
-        result.kind, description,
-        result.file, result.line, result.elapsed, result.exception
-      )
+      parent.report(kind, [@description.presence, description.presence].compact!.join(" / "), file, line, elapsed, ex)
     end
   end
 end
